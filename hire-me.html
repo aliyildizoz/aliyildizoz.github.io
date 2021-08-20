@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,700">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css?h=c2a3618fc145edb3ca7fb92db4b9f32b">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.6.1/css/pikaday.min.css">
+    <link rel="stylesheet" href="https://s.pageclip.co/v1/pageclip.css" media="screen">
+
 </head>
 
 <body>
@@ -30,23 +32,21 @@
                 <div class="heading">
                     <h2>Hire Me</h2>
                 </div>
-                <form>
-                    <div class="mb-3"><label class="form-label" for="subject">Subject</label><select class="form-select" id="subject">
-                            <optgroup label="This is a group">
-                                <option value="12" selected="">This is item 1</option>
-                                <option value="13">This is item 2</option>
-                                <option value="14">This is item 3</option>
-                            </optgroup>
-                        </select></div>
-                    <div class="mb-3"><label class="form-label" for="email">Email</label><input class="form-control" type="email" id="email"></div>
-                    <div class="mb-3"><label class="form-label" for="message">Message</label><textarea class="form-control" id="message"></textarea></div>
-                    <div class="mb-3">
-                        <div class="row">
-                            <div class="col-md-6"><label class="form-label" for="hire-date">Date</label><input class="form-control" id="hire-date" type="date"></div>
-                            <div class="col-md-6 button"><button class="btn btn-primary d-block w-100" type="submit">Hire Me</button></div>
-                        </div>
-                    </div>
-                </form>
+                <form action="https://send.pageclip.co/bof7y7nMdkDkOsmeogYezazEpD5f1ZEh/contact" class="pageclip-form" method="post">
+                    <!-- Replace these inputs with your own. Make sure they have a "name" attribute! -->
+                  
+                    <!-- It looks like you are creating a contact form. These email and subject fields are special -->
+                    <!-- See https://pageclip.co/docs#special-fields for more info -->
+                    <input type="email" name="email" value="aliyildizoz909@gmail.com" />
+                    <input type="text" name="subject" value="A contact subject" />
+                  
+                    <!-- This button will have a loading spinner. Keep the inner span for best results. -->
+                    <button type="submit" class="pageclip-form__submit">
+                      <span>Send</span>
+                    </button>
+                  </form>
+            
+                <script src="https://s.pageclip.co/v1/pageclip.js" charset="utf-8"></script>
             </div>
         </section>
     </main>
@@ -61,6 +61,8 @@
     <script src="assets/js/script.min.js?h=93ba179fa52dd72fece483aba133cf5f"></script>
     <script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
     <noscript><img src="https://queue.simpleanalyticscdn.com/noscript.gif" alt="" referrerpolicy="no-referrer-when-downgrade" /></noscript>
+    <script src="https://s.pageclip.co/v1/pageclip.js" charset="utf-8"></script>
+
 </body>
 
 </html>
