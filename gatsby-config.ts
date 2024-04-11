@@ -138,7 +138,6 @@ const config: GatsbyConfig = {
       },
     },
   ].filter(Boolean) as Array<PluginRef>
-
 }
 
 export default config
