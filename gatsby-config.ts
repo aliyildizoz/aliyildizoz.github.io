@@ -137,8 +137,7 @@ const config: GatsbyConfig = {
         open: false,
       },
     },
-  ].filter(Boolean) as Array<PluginRef>,
-  pathPrefix:'/aliyildizoz.github.io'
+  ].filter(Boolean) as Array<PluginRef>
 
 }
 
