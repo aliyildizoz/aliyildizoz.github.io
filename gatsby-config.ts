@@ -138,6 +138,8 @@ const config: GatsbyConfig = {
       },
     },
   ].filter(Boolean) as Array<PluginRef>,
+  pathPrefix:'/aliyildizoz.github.io'
+
 }
 
 export default config
