@@ -1,0 +1,94 @@
+---
+title: "Understanding Asp.Net Core Dockerfile"
+date: 2022-09-11
+slug: "/understanding-asp-net-core-dockerfile"
+tags:
+  - Dockerfile
+  - AspNetCore
+  - Docker
+---
+
+
+Before starting, the header can be misleading :) When I started writing this blog, I planned to take over Dockerfile for only Asp.Net Core-related parts. However, after I began to write, I realized that the Asp.Net Core parts are only 20% of the Dockerfile. So, I decided to change the blog course to understand the whole process of Dockerfile build. 
+
+---
+
+
+## Dockerfile Build Process
+A Dockerfile is a file that includes instructions under each other. In other words, it is a set of instructions. Docker reads and builds these files to create images and later uses these images to create containers.
+
+### But how it works?
+When we build a Dockerfile, Docker starts many processes from the first line to the end of the lines. Every line corresponds to an image layer, using the previous layer as a base image. Docker also caches every layer in this process to avoid building the unchanged layers again. With this cache mechanism, Docker reduces the build time.
+
+### Docker build steps
+1. In the first step, Docker reads the first line and pulls(if it does not exist) the specified base image from a registry during the `FROM` instruction process. 
+2. If there are execution instructions in the Dockerfile, such as `RUN`, `COPY` or `ADD` Docker creates a temporary container from the previous image layer and executes these instructions in this container. After it completes the executions, Docker captures the changes in the temporary container and creates a new image layer from these changes. After the layer is created, Docker removes these temporary containers. 
+3. If a multi-stage build is involved and the stages don't depend on each other, Docker builds every stage in parallel.
+4. After Docker creates layers for each line, it tags these layers with a final image.
+
+Because of the cash mechanism, the order of instructions is very important. When creating a Dockerfile, we should first add the instructions that are less likely to change.
+
+For example, we have a Dockerfile as below.
+
+```none
+FROM scratch
+COPY src .
+EXPOSE 80
+```
+
+We built this file, and Docker started to cache every line. Later, we needed to change our source files and rebuild the image. In this case, docker will build `COPY src .` and `EXPOSE 80` lines, but will not build `FROM scratch` line, it will get it from the cache. This happens because the changes happen after `FROM` instruction, they don't affect this layer.
+
+If we change the Dockerfile as below
+```none
+FROM scratch
+EXPOSE 80
+COPY src .
+```
+Even if we change `src` files, Docker will not build the `EXPOSE 80` line again. It will use the cached layer. Because the changes happen after this line.
+
+After understanding how Docker builds a Dockerfile, we can review every Asp.Net Core Web API Dockerfile instruction.
+
+---
+
+## Asp.Net Core Web Api Dockerfile
+VS 2022 has a Docker support tool that helps us create and build Dockerfiles or run containers. This is the default Dockerfile with recommended instructions provided by the VS 2022.
+
+```none withLineNumbers
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER app
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["DockerDemoWebApi/DockerDemoWebApi.csproj", "DockerDemoWebApi/"]
+RUN dotnet restore "./DockerDemoWebApi/DockerDemoWebApi.csproj"
+COPY . .
+WORKDIR "/src/DockerDemoWebApi"
+RUN dotnet build "./DockerDemoWebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./DockerDemoWebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "DockerDemoWebApi.dll"]
+```
+---
+
+```none withLineNumbers highlight=1
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+```
+We pulled an image with the FROM instruction and gave it a temporary name(base). This image is a Debian OS image that includes the Asp.net Core 8.0 runtime. You can see its Dockerfile.
+
+#### Why do we add an image as a base here?
+To run an application, we should have an OS that has our application dependencies. Without a base image, we can't run our applications.
+
+```none withLineNumbers highlight=1
+USER app
+```
+We are switching to app users here. After this instruction, our OS changes the default user(root) to the app user. The app user has fewer permissions than the root user, which is better than using a limitless permission user for potential security vulnerabilities.
