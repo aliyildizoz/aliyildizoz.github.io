@@ -46,6 +46,13 @@ const config: GatsbyConfig = {
       },
     },
     {
+      resolve: "gatsby-plugin-google-tagmanager",
+      options: {
+        id: "G-NRX3KZJV9S",
+        defaultDataLayer: { platform: "gatsby" }
+      },
+    },
+    {
       resolve: `gatsby-plugin-sitemap`,
       options: {
         output: `/`,

@@ -25,7 +25,7 @@ const Footer = () => {
         &copy; {new Date().getFullYear()} by {siteTitle}. All rights reserved.
       </div>
       
-      <Script
+      {/* <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${process.env.REACT_APP_GTAG}`}
         strategy="off-main-thread"
         />
@@ -36,7 +36,7 @@ const Footer = () => {
             gtag('js', new Date());
             gtag('config', ${process.env.REACT_APP_GTAG}, { page_path: location ? location.pathname + location.search + location.hash : undefined })
         `}
-        </Script>
+        </Script> */}
         <Script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></Script>
     </footer>
   )
