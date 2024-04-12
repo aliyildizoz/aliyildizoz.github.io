@@ -50,7 +50,7 @@ const config: GatsbyConfig = {
       options: {
         output: `/`,
       },
-    },
+    },   
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
