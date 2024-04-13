@@ -1,7 +1,6 @@
 import * as React from "react"
 import { Helmet } from "react-helmet"
 import { Script } from "gatsby"
-import { useState } from "react";
 
 export default function Contact() {
   return (
@@ -14,17 +13,41 @@ export default function Contact() {
                   `a:hover {
                         text-decoration: none;
                         color: inherit;
-                    }`
+                    }
+                    body{
+                      background-color: inherit;
+                      color: inherit;
+                      font-family: inherit;
+                      font-size: inherit;
+                      font-weight: inherit;
+                      line-height: inherit;
+                      text-align: inherit;
+                    }      
+                    .form-control{
+                      background-color: inherit;
+                      color: inherit;
+                    }   
+                    button:focus, button:active {
+                      outline: none !important;
+                      box-shadow: none !important;
+                    }    
+                    textarea,input[type="text"],input[type="email"]{ 
+                      background-color:inherit !important;
+                    }
+                    textarea:focus,input[type="text"]:focus,input[type="email"]:focus{ 
+                      color: inherit;
+                    }
+                    `
               }
             </style>
         </Helmet>
       <div className="row">
         <div className="col-10">
             <form className="pageclip-form" action="https://send.pageclip.co/bof7y7nMdkDkOsmeogYezazEpD5f1ZEh/contact" method="post">
-                <div className="mb-3"><label className="form-label" htmlFor="name">Your Name</label><input className="form-control item" type="text" id="name" name="name" required=""/></div>
-                <div className="mb-3"><label className="form-label" htmlFor="subject">Subject</label><input className="form-control item" type="text" id="subject" name="subject" required=""/></div>
-                <div className="mb-3"><label className="form-label" htmlFor="email">Email</label><input className="form-control item" type="email" id="email" name="email" required=""/></div>
-                <div className="mb-3"><label className="form-label" htmlFor="message">Message</label><textarea className="form-control item" id="message" name="body" required=""></textarea></div>
+                <div className="mb-3"><label className="form-label" htmlFor="name">Your Name</label><input className="form-control item" type="text" id="name" name="name" required/></div>
+                <div className="mb-3"><label className="form-label" htmlFor="subject">Subject</label><input className="form-control item" type="text" id="subject" name="subject" required/></div>
+                <div className="mb-3"><label className="form-label" htmlFor="email">Email</label><input className="form-control item" type="email" id="email" name="email" required/></div>
+                <div className="mb-3"><label className="form-label" htmlFor="message">Message</label><textarea className="form-control item" id="message" name="body" required></textarea></div>
                 <div className="mb-3"><button className="btn btn-primary btn-lg d-block w-100" type="submit">Send</button></div>
             </form>
         </div>
