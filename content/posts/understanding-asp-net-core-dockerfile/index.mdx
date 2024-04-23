@@ -10,24 +10,24 @@ tags:
 ---
 
 
-Before starting, the header can be misleading :) When I had started writing this blog, I planned to take over Dockerfile for only Asp.Net Core-related parts. However, after I began to write, I realized that the Asp.Net Core parts are only 20% of the Dockerfile. So, I decided to change the blog course to understand the whole process of Dockerfile build. 
+Before we begin, note that the title might be a bit misleading. When I had started writing this blog, I planned to take over Dockerfile for only Asp.Net Core-related parts. However, after I began to write, I realized that the Asp.Net Core parts are only 20% of the Dockerfile. So, I decided to change the blog course to understand the whole process of Dockerfile build. 
 
 ![Banner](./Banner.png)
 
 
 ## Dockerfile Build Process
-A Dockerfile is a file that includes instructions under each other. In other words, it is a set of instructions. Docker reads and builds these files to create images and later uses these images to create containers.
+A Dockerfile is a file that contains a set of instructions listed sequentially. In other words, it is a set of instructions. Docker reads and builds these files to create images and later uses these images to create containers.
 
 ### But how it works?
 When we build a Dockerfile, Docker starts many processes from the first line down to the end of the lines. Every line corresponds to an image layer, using the previous layer as a base image. Docker also caches every layer in this process to avoid building the unchanged layers again. With this cache mechanism, Docker reduces the building time.
 
 ### Docker build steps
 1. In the first step, Docker reads the first line and pulls(if it does not exist) the specified base image from a registry during the `FROM` instruction process. 
-2. If there are executions of instructions in the Dockerfile, such as `RUN`, `COPY` or `ADD` Docker creates a temporary container from the previous image layer and executes these instructions in this container. After it completes the executions, Docker captures the changes in the temporary container and creates a new image's layer from these changes. After executions of instructions the layer will be created and Docker removes these temporary containers. 
+2. If there are executions of instructions in the Dockerfile, such as `RUN`, `COPY` or `ADD` Docker creates a temporary container from the previous image layer and executes these instructions in this container. After completing the executions, Docker captures the changes in the temporary container and creates a new layer in the image from these changes.. After executions of instructions the layer will be created and Docker removes these temporary containers. 
 3. If a multi-stage build is involved and the stages don't depend on each other, Docker builds every stage in parallel.
 4. After Docker creates layers for each line, it tags these layers with a final image.
 
-Because of the cash mechanism, the order of instructions has become very important. When creating a Dockerfile, we should first add the instructions that are less likely to change.
+Due to the caching mechanism, the order of instructions becomes very important. When creating a Dockerfile, we should first add the instructions that are less likely to change.
 
 For example, we have a Dockerfile below.
 
@@ -45,7 +45,7 @@ FROM scratch
 EXPOSE 80
 COPY src .
 ```
-Even if we change `src` files, Docker wouldn't build the `EXPOSE 80` line again. It will use the cached layer because the changes happen after this line.
+Even if we change `src` files, Docker would not rebuild the `EXPOSE 80` line. It uses the cached layer because the changes happen after this line.
 
 After understanding how Docker builds a Dockerfile, we can review every Asp.Net Core Web API Dockerfile instruction.
 
@@ -87,18 +87,18 @@ ENTRYPOINT ["dotnet", "DockerDemoWebApi.dll"]
 We pulled an image with the `FROM` instruction and gave it a temporary name(base). This image is a Debian OS image that includes the Asp.net Core 8.0 runtime. You can see its [Dockerfile here](https://github.com/dotnet/dotnet-docker/blob/9ffd75ed9a9a8790e7c7af5c925eefe7e4015bc1/src/aspnet/8.0/bookworm-slim/amd64/Dockerfile).
 
 #### Why do we add an image as a base here?
-To run an application, we should have an OS that has our application dependencies. Without a base image, we can't run our applications.
+To run an application, we should have an OS that has our application's dependencies. Without a base image, we can't run our applications.
 
 ```none
 2. USER app
 ```
-We switch to an **app** user here. After this instruction, our OS changes the default user(**root**) to the **app** user. The app user has fewer permissions than the root user, which is better than using a limitless permission user for potential security vulnerabilities.
+Here, we switch to the **app** user. After this instruction, our OS changes the default user(**root**) to the **app** user. The app user has fewer permissions than the root user, which is better than using a limitless permission user for potential security vulnerabilities. [See more information](https://learn.microsoft.com/en-us/dotnet/core/compatibility/containers/8.0/app-user)
 
 
 ```none
 3. WORKDIR /app
 ```
-With this instruction, we switched to the **/app** directory. If **/app** doesn't exist, Docker will create it. This directory will contain our published application files.
+With this instruction, we switched to the **/app** directory. If **/app** doesn't exist, Docker creates it. This directory contains our published application files.
 
 ```none title="The folder view in the image after creating the working directory at the base stage."
 base-stage
@@ -118,15 +118,14 @@ We can use multi-stage builds in Dockerfiles. In this Dockerfile, we have 4 stag
 #### How do multi-stage builds reduce image size?
 To develop a .Net application, we first need an SDK(Software Development Kit). Without an SDK, we can't publish or build our application. However, SDKs are large, and they increase image sizes too much if we consider that we only need a runtime to run our application(that's why we used a runtime as a base image, not an SDK). At this point, multi-stage builds are very helpful in avoiding unnecessary tools and SDKs. After a stage is completed, we move the files created by SDK to the final stage. Docker doesn't move the SDK or the tool we installed in this stage to the final stage. So, in this way, our image only has a runtime and uses the SDK, too.
 
-In this line, we create a stage called **build** from .Net SDK Image. In this stage, we perform our application's build operations.
+In this line, we create a stage named **build** from .Net SDK Image. In this stage, we perform our application's build operations.
 
 ```
 8. ARG BUILD_CONFIGURATION=Release
 ```
-In this line, we declare an `ARG` called BUILD_CONFIGURATION with default value(Release). We use this arg to change the build and publish configuration when we build Dockerfile.
-Dockerfile lets us change the build behavior at runtime when we execute the build command. 
+In this line, we declare an `ARG` named BUILD_CONFIGURATION with default value(Release). We use this arg to change the build and publish configuration when we build Dockerfile.
 
-We have two versions of our base image, and we want to build and publish our app with these two versions. 
+Dockerfile lets us change the build behavior at runtime when we execute the build command. We have two versions of our base image, and we want to build and publish our app with these two versions. 
 
 #### What can we do here?
 First, we use two different Dockerfiles and add both versions to them. Yes, it works for us, but we have to build these images separately. However, if we use an arg like this `ARG VERSION` then, if we add the arg with **$** in our base image statement like this `FROM base-image:$VERSION` we can change the version when building the Dockerfile with `--build-arg` flag.
@@ -147,12 +146,12 @@ build-stage
 ```
 10. COPY ["DockerDemoWebApi/DockerDemoWebApi.csproj",  "DockerDemoWebApi/"]
 ```
-`COPY` is the most necessary instruction in a Dockerfile; if we cannot copy our application to the image, what is the meaning of dockerizing the app? In this line, we are copying our app file with the .csproj extension to the DockerDemoWebApi directory in the **/src** file. When we use the `COPY` instruction, Docker creates a directory even if it doesn't exist in the image, like the `WORKDIR` instruction.
+`COPY` is the most necessary instruction in a Dockerfile; if we cannot copy our application to the image, what is the meaning of dockerizing the app? In this line, we copy our app file with the .csproj extension to the DockerDemoWebApi directory in the **/src** file. When we use the `COPY` instruction, Docker creates a directory even if it doesn't exist in the image, like the `WORKDIR` instruction.
 
 The important thing about the `COPY` instruction is to consider which path to use when executing the docker build command. If we provide the wrong build context to the command, Docker does not find the files we want to copy and give an error.
 
 #### Why we only copied DockerDemoWebApi.csproj file?
-Before building the application, we should install its dependencies, such as the packages, libraries, or frameworks it uses. If docker can't install a package, it stops the build process, allowing us to catch errors easily. Another reason we do this is to benefit from the cache mechanism. Once we install all packages successfully, Docker won't install the packages even if we rebuild the Dockerfile again. It uses this layer from the cache.
+Before building the application, we should install its dependencies, such as the packages, libraries, or frameworks it uses. If docker can't install a package, it stops the build process, allowing us to catch errors easily. Another reason we do this is to benefit from the cache mechanism. Once we install all packages successfully, Docker does not install the packages even if we rebuild the Dockerfile again. It uses this layer from the cache.
 
 ```none title="The folder view in the image after copying DockerDemoWebApi.csproj file at the build stage. We are still in the src directory."
 build-stage
@@ -165,7 +164,7 @@ build-stage
 ```
 11. RUN dotnet restore "./DockerDemoWebApi/DockerDemoWebApi.csproj"
 ```
-We are using `RUN` instructions to execute specified commands. In this line, we execute the `dotnet restore` command. This command creates config files to install our packages for the provided project. (./DockerDemoWebApi/DockerDemoWebApi.csproj).
+We use `RUN` instructions to execute specified commands. In this line, we execute the `dotnet restore` command. This command creates config files to install our packages for the provided project. (./DockerDemoWebApi/DockerDemoWebApi.csproj).
 
 
 ```none title="The folder view in the image after copying DockerDemoWebApi.csproj file at the build stage."
@@ -210,7 +209,7 @@ build-stage
         └── WeatherForecast.cs
 ```
 #### .dockerignore
-Our project has many folders and files. Most of them were created during development. These files make the development process easier and speed up the building process. However, we don't need them in the image. Firstly, we start building the application in the image(`dotnet build`), and also, we don't develop it in the image. To avoid these files, we use the .dockerignore file. This also will increase the build time when we build the Dockerfile.
+Our project has many folders and files. Most of them were created during development. These files make the development process easier and speed up the building process. However, we don't need them in the image. Firstly, we start building the application in the image(`dotnet build`), and also, we don't develop it in the image. To avoid these files, we use the .dockerignore file. This also increases the building time when we build the Dockerfile.
 
 ```none title="Sample .dockerignore file"
 **/.dockerignore
@@ -243,7 +242,7 @@ We changed the working directory to build our application.
 ```
 14. RUN dotnet build "./DockerDemoWebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 ```
-Here, we build our application with `dotnet build` command. To build our application with this command, we should give the application path where the files with the **.csproj** or **.sln** extension exist. With `-c` flag, we indicate which configuration(Debug or Release) we will build the application with. We used $BUILD_CONFIGURATION arg here. This means we can provide this value when we build Dockerfile. If we don't provide it, the Docker will use the default arg value(8th Line). With `-o` flag, we provide the path that dotnet saves the created files after the build process.
+Here, we build our application with `dotnet build` command. To build our application with this command, we should give the application path where the files with the **.csproj** or **.sln** extension exist. With `-c` flag, we indicate which configuration(Debug or Release) we build the application with. We used $BUILD_CONFIGURATION arg here. This means we can provide this value when we build Dockerfile. If we don't provide it, the Docker uses the default arg value(8th Line). With `-o` flag, we provide the path that dotnet saves the created files after the building process.
 
 ```none title="The folder view in the image after running the build command at the build stage."
 build-stage
@@ -284,7 +283,7 @@ If you notice, the app folder is on the same level as the src folder, that is be
 ```
 16. FROM build AS publish
 ```
-Docker also allows us to create a stage from another stage like here(16th line). In this stage, we will do our publishing operations.
+Docker also allows us to create a stage from another stage like here(16th line). In this stage, we do our publishing operations.
 
 ```
 17. ARG BUILD_CONFIGURATION=Release
@@ -351,7 +350,7 @@ publish-stage
 ```
 20. FROM base AS final
 ```
-We create a stage called the **final** from the **base** stage.
+We create a stage named the **final** from the **base** stage.
 
 ```
 21. WORKDIR /app
@@ -400,7 +399,7 @@ docker build ./WrongBuildContext
 
 The second step is specifying the Dockerfile path. This is also important because if your Dockerfile path is different from your build context, you may have to use `-f` flag to specify the Dockerfile path. 
 
-You can give a tag and a name to your image with `-t` flag, but if you don't use it, docker will set  `<none>` for the name and tag. If you only use one word, docker sets that word as the name of the image and shows your current image tag as the latest. However, if you use a colon(`:`), docker sets the word on the left of the colon as a name and the right of the colon as a tag.
+You can give a tag and a name to your image with `-t` flag, but if you don't use it, docker sets  `<none>` for the name and tag. If you only use one word, docker sets that word as the name of the image and shows your current image tag as the latest. However, if you use a colon(`:`), docker sets the word on the left of the colon as a name and the right of the colon as a tag.
 
 
 ```
@@ -419,4 +418,5 @@ REPOSITORY    TAG       IMAGE ID       CREATED             SIZE
 docker-demo   v1        d798fa0b4c44   About an hour ago   221MB
 ```
 The blog took a bit longer, but I wanted you to understand better how Docker builds operations. 
+
 Thank you for reading until the end. See you.
