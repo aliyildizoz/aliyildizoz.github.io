@@ -1,6 +1,6 @@
 ---
 title: "Understanding Asp.Net Core Dockerfile"
-date: 2024-04-13
+date: 2024-04-23
 slug: "/understanding-asp-net-core-dockerfile"
 banner: "./Banner.png"
 tags:
@@ -24,6 +24,7 @@ When we build a Dockerfile, Docker starts many processes from the first line dow
 3. If a multi-stage build is involved and the stages don't depend on each other, Docker builds every stage in parallel.
 4. After Docker creates layers for each line, it tags these layers with a final image.
 
+### Importance of Instruction Order
 Due to the caching mechanism, the order of instructions becomes very important. When creating a Dockerfile, we should first add the instructions that are less likely to change.
 
 For example, we have a Dockerfile below.
@@ -275,7 +276,7 @@ build-stage
         └── Swashbuckle.AspNetCore.SwaggerUI.dll
 ```
 
-If you notice, the app folder is on the same level as the src folder, that is because we provide the build path with a starting slash(`/app/build`). This usage creates folders at the root level.
+If you notice, the app folder is on the same level as the src folder, that is because we provide the build path with a starting slash(`-o /app/build`). This usage creates folders at the root level.
 
 ```
 16. FROM build AS publish
