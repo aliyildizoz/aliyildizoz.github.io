@@ -22,7 +22,6 @@ const config: GatsbyConfig = {
     `gatsby-plugin-react-helmet`,
     {
       resolve: `@lekoarts/gatsby-theme-minimal-blog`,
-      // See the theme's README for all available options
       options: {
         navigation: [
           {
