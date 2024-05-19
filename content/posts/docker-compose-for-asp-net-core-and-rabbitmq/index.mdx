@@ -1,0 +1,182 @@
+---
+title: "Docker-Compose for Asp.Net Core & RabbitMQ"
+date: 2024-05-20
+slug: "/docker-compose-for-asp-net-core-and-rabbitmq"
+banner: "./Banner.png"
+tags:
+  - Docker-Compose
+  - Asp.Net Core
+  - RabbitMQ
+  - Docker
+---
+
+![Banner](./Banner.png)
+
+RabbitMQ is a popular open-source message broker. It is easy to implement in your application and manage your queue, exchange, and messages. It supports many programming languages. Also, you can use it with many technologies, such as web apps, RPC, Streaming, or IoT.
+
+In this article, I will demonstrate how to configure a Docker-Compose environment for an ASP.NET Core Web API and RabbitMQ.
+
+### Example Application
+In our application, we will have two projects. We will send a weather forecast notification to our queue via the Asp.Net Core Web API application and then receive the message in the Worker Service application.
+
+1. **Asp.Net Core Web API Application:** This app will be our publisher. We will make an HTTP Post request with Swagger to publish our message.
+2. **Worker Service Application:** This app will be our consumer. We will receive messages here.
+
+#### Connection String Configuration
+When our apps run in a container they will be in the Production environment. So I added the RabbitMQ connection string to the `appsettings.Production.json` file.
+
+```json
+  "ConnectionStrings": {
+    "RabbitMQ": "amqp://guest:guest@docker-rabbitmq-server:5672"
+  }
+```
+
+As you see I gave the server name as `docker-rabbitmq-server`. This name corresponds to the RabbitMQ service name in the docker-compose file. Docker provides a DNS service between containers in the same network. So we don't have to give the server IP address. It is important that we use the same connection string in both projects. They have to connect to the same RabbitMQ server.
+
+I used the default username and password for RabbitMQ so I didn’t add an Environment Variable for those fields. You can provide those fields with environment variables at runtime for security vulnerabilities.
+
+#### Sending Message
+```c#
+[HttpPost]
+public IActionResult Post()
+{
+    var weatherForecast = new WeatherForecast
+    {
+        Date = DateTime.Now,
+        TemperatureC = Random.Shared.Next(-20, 55),
+        Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+    };
+
+    _rabbitMQPublisher.Publish(weatherForecast);
+
+    return Ok(weatherForecast);
+}
+```
+
+After running the web API, we will make a post request to this action. As you see, it creates a random temperature and summary and then publishes it.
+
+#### Receiving Message
+```c#
+public override Task StartAsync(CancellationToken cancellationToken)
+ {
+     _channel = _rabbitMQClientService.Connect();
+     _channel.BasicQos(0, 1, false);
+     return base.StartAsync(cancellationToken);
+ }
+ protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+ {
+     var consumer = new AsyncEventingBasicConsumer(_channel);
+     _channel.BasicConsume(RabbitMQClientService.QueueName, false, consumer);
+     consumer.Received += Consumer_Received;
+ }
+
+ private async Task Consumer_Received(object sender, BasicDeliverEventArgs @event)
+ {
+     var weatherForecast = JsonSerializer.Deserialize<WeatherForecast>(Encoding.UTF8.GetString(@event.Body.ToArray()));
+
+     Console.WriteLine("\nNew Weather Forecast Notification!!!");
+     Console.WriteLine($"{nameof(weatherForecast.Date)}:{weatherForecast.Date.ToString("f")} {nameof(weatherForecast.TemperatureF)}:{weatherForecast.TemperatureF} {nameof(weatherForecast.TemperatureC)}:{weatherForecast.TemperatureC} {nameof(weatherForecast.Summary)}:{weatherForecast.Summary}");
+
+     _channel.BasicAck(@event.DeliveryTag, false);
+ }
+```
+
+I chose the worker service as the consumer app because it has built-in DI(Dependency Injection), Configuration tool, `appsettings` file, etc. You can do anything you want here what you do in an Asp.Net Core App too. Our worker service will run automatically after the app is launched.
+
+Here we connected to the Received event. If the queue receives a message, it will trigger this event.
+
+You can see the app from [here](https://github.com/aliyildizoz/DockerDemo/tree/docker-compose-rabbitmq-demo).
+
+---
+
+### Docker-Compose
+```yaml withLineNumbers
+version: '3.8'
+
+services:
+  asp-net-core-publisher:
+    container_name: asp-net-core-publisher
+    image: aliyildizoz909/docker-demo-rabbitmq-publisher-rabbitmq-publisher
+    ports:
+      - "5000:8080"
+    depends_on:
+      - docker-rabbitmq-server   
+  worker-service-consumer:
+    container_name: worker-service-consumer
+    image: aliyildizoz909/docker-demo-rabbitmq-publisher-rabbitmq-consumer
+    depends_on:
+      - docker-rabbitmq-server
+  docker-rabbitmq-server:
+    container_name: docker-rabbitmq-server
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+```
+
+We have three services here: the first one is our web API the publisher, the second one is our worker service the consumer and the third one is the RabbitMQ server.
+
+#### asp-net-core-publisher
+```yaml
+ asp-net-core-publisher:
+    container_name: asp-net-core-publisher
+    image: aliyildizoz909/docker-demo-rabbitmq-publisher-rabbitmq-publisher
+    ports:
+      - "5000:8080"
+    depends_on:
+      - docker-rabbitmq-server 
+```
+* `container_name: asp-net-core-publisher` : We set the container name as `asp-net-core-publisher`
+* `image: aliyildizoz909/docker-demo-rabbitmq-publisher` : We specify the image source as [aliyildizoz909/docker-demo-rabbitmq-publisher](https://hub.docker.com/r/aliyildizoz909/docker-demo-rabbitmq-publisher).
+* `MSSQL_SA_PASSWORD=Password1*` : Under the environment section, we set the `MSSQL_SA_PASSWORD` environment variable. This variable’s value and the variable's value with the same name under `docker-demo-sql-server` service should be the same. Otherwise, we cannot access the SQL server in the container. The variable's name is another important thing we should be careful about. We must use the same variable name when we get the password in our application.
+* `"5000:8080"` : Here, we did a port publish. When we go to the **5000** port via localhost, we tell the docker to redirect the requests to the **8080** port in the `docker-demo-web-api` container. **8080** port is the default port of our published app in the container for asp.net core apps. You can change it via the `ASPNETCORE_URLS` environment variable or with the new one `ASPNETCORE_HTTP_PORTS` . [See more information](https://learn.microsoft.com/en-us/dotnet/core/compatibility/containers/8.0/aspnet-port).
+* `depends_on` This section defines the priority of services to run. We add here which services we want to run before the current service. So, in our example, we add `docker-demo-sqlservice` here to run our application after the SQL server is ready.
+
+#### worker-service-consumer
+```yaml
+ worker-service-consumer:
+    container_name: worker-service-consumer
+    image: aliyildizoz909/docker-demo-rabbitmq-consumer
+    depends_on:
+      - docker-rabbitmq-server
+```
+* `container_name: worker-service-consumer` : We set the container name as `worker-service-consumer`
+* `image: aliyildizoz909/docker-demo-rabbitmq-consumer` : We specify the image source as [aliyildizoz909/docker-demo-rabbitmq-consumer](https://hub.docker.com/r/aliyildizoz909/docker-demo-rabbitmq-consumer).
+* `depends_on`: Before the application runs the RabbitMQ server should be ready otherwise, it will not be able to connect and will give an error.
+
+#### docker-rabbitmq-server
+```yaml
+  docker-rabbitmq-server:
+    container_name: docker-rabbitmq-server
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+```
+
+* `container_name: docker-rabbitmq-server` : We set the container name as `docker-rabbitmq-server`
+* `image: rabbitmq:3-management` :We specify the image source as [rabbitmq:3-management](https://hub.docker.com/_/rabbitmq). I utilized the `3-management` tag for this image to enable the RabbitMQ management plugin for monitoring exchanges, queues, and messages. This tag will provide a management tool at `localhost:15672` .
+* `15672:15672`: These ports represent the management plugin.
+* `5672:5672`: These ports represent the RabbitMQ server.
+
+### Running Docker-Compose File
+To run our Docker-Compose setup, use the following command from the directory containing your `docker-compose.yml` file
+```
+docker compose up
+```
+After running this command, we can access our application here http://localhost:5000
+
+#### Docker Desktop
+![DockerDesktopView](./DockerDesktopView.png)
+
+#### Swagger View
+![Swagger](./Swagger.png)
+
+#### RabbitMQ Management Plugin
+![RabbitMQManagement](./RabbitMQManagement.png)
+
+#### App Demo
+![AppDemo](./AppDemo.png)
+
+Thank you.
+
